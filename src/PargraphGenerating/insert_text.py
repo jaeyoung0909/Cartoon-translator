@@ -44,6 +44,7 @@ class post:
 
             with open(replace_json_path) as json_file:
                 json_data = json.load(json_file)
+                print(json.dumps(json_data, indent = '\t'))
         else:
             raise Exception('There is no "{0}" json file'.format(self.name))
 
@@ -531,7 +532,7 @@ class TextBox:
 
 def main():
 
-    a = post(str(5))
+    a = post("0")
     a.get_textbox3()
     #a.erase_text(a.get_jsonbox(), (255, 0, 0), True)
     #a.erase_text_candi(a.get_jsonbox(), (0, 255, 0), True)
