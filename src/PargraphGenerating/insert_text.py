@@ -49,29 +49,55 @@ class post:
 
         return json_data
 
-    def erase_text(self,boxes, color=(255,255,255), boundary = False):
-        img_draw = ImageDraw.Draw(self.original_image)
-
-        if color is None:
-            if not boundary:
-                for box in boxes:
-                    color = self.get_background_color(box)
-                    img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],fill = color)
-            else:
-                for box in boxes:
-                    color = self.get_background_color(box)
-                    img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],outline=color)
-            del img_draw
+    def erase_text(self, boxes, color=(255,255,255), boundary = False, img = None, index = None):
+        if(img is None):
+            img_draw = ImageDraw.Draw(self.original_image)
         else:
-            if not boundary:
-                for box in boxes:
-
-                    img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],fill = color)
+            img_draw = ImageDraw.Draw(img)
+        if index is None:
+            if color is None:
+                if not boundary:
+                    for box in boxes:
+                        color = self.get_background_color(box)
+                        img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],fill = color)
+                else:
+                    for box in boxes:
+                        color = self.get_background_color(box)
+                        img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],outline=color)
+                del img_draw
             else:
-                for box in boxes:
+                if not boundary:
+                    for box in boxes:
 
-                    img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],outline=color)
-            del img_draw
+                        img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],fill = color)
+                else:
+                    for box in boxes:
+
+                        img_draw.rectangle([(box[3],box[1]),(box[4],box[2])],outline=color)
+                del img_draw
+        else:
+            if color is None:
+                if not boundary:
+                    for i in index:
+                        box = boxes[i]
+                        color = self.get_background_color(box)
+                        img_draw.rectangle([(box[3], box[1]), (box[4], box[2])], fill=color)
+                else:
+                    for i in index:
+                        box = boxes[i]
+                        color = self.get_background_color(box)
+                        img_draw.rectangle([(box[3], box[1]), (box[4], box[2])], outline=color)
+                del img_draw
+            else:
+                if not boundary:
+                    for i in index:
+                        box = boxes[i]
+                        img_draw.rectangle([(box[3], box[1]), (box[4], box[2])], fill=color)
+                else:
+                    for i in index:
+                        box = boxes[i]
+                        img_draw.rectangle([(box[3], box[1]), (box[4], box[2])], outline=color)
+                del img_draw
 
     def erase_text_candi(self,boxes, color=(255,255,255), boundary = False):
         img_draw = ImageDraw.Draw(self.original_image)
@@ -88,32 +114,36 @@ class post:
         jsonbox = []
         data = self.json_data['textAnnotations']
         for i in range(len(data)):
-            if i==0:
+            if i == 0:
                 continue
             coor_data = data[i]['boundingPoly']['vertices']
             box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
             jsonbox.append(box)
         return jsonbox
 
-    def detect_xoverlap(self, boxes, margin=0.8, threshold=15, discriminate = False):
+    def detect_overlap(self, boxes, margin=0.8, threshold=15, discriminate = False, x_direction = True, get = False):
         overlap_boxes = []
+        gather = []
+        gatherer = []
         overlap_box = [-1,-1,-1,-1,-1]
         overlap_elem = []
         if discriminate:
-            discri = self.discriminate_textboxes(boxes)
-        for box in boxes:
+            discri = self.discriminate_textboxes(self.get_jsonbox())
+        for i, box in enumerate(boxes):
             if(overlap_box[4] == -1):
                 overlap_box = copy.deepcopy(box)
+                gatherer.append(i)
                 if isinstance(box[0],list):
                     overlap_elem.extend(box[0])
                 else:
                     overlap_elem.append(box[0])
                 continue
-            if(self.overlap(overlap_box, box,margin,threshold)):
+            if(self.overlap(overlap_box, box,margin,threshold, x_direction)):
                 overlap_box[1] = min(box[1],overlap_box[1])
                 overlap_box[2] = max(box[2],overlap_box[2])
                 overlap_box[3] = min(box[3],overlap_box[3])
                 overlap_box[4] = max(box[4],overlap_box[4])
+                gatherer.append(i)
                 if isinstance(box[0], list):
                     overlap_elem.extend(box[0])
                 else:
@@ -122,6 +152,9 @@ class post:
                 if not discriminate:
                     overlap_box[0] = overlap_elem
                     overlap_boxes.append(overlap_box)
+                    gather.extend(gatherer)
+                    del gatherer
+                    gatherer = []
                 else:
                     count = 0
                     for elem in overlap_elem:
@@ -132,9 +165,13 @@ class post:
                     if(count > 0):
                         overlap_box[0] = overlap_elem
                         overlap_boxes.append(overlap_box)
+                        gather.extend(gatherer)
                 overlap_box = copy.deepcopy(box)
                 del overlap_elem
                 overlap_elem = []
+                del gatherer
+                gatherer = []
+                gatherer.append(i)
                 if isinstance(box[0], list):
                     overlap_elem.extend(box[0])
                 else:
@@ -147,66 +184,17 @@ class post:
                 else:
                     count = count-1
             if(count > 0):
+                overlap_box[0] = overlap_elem
                 overlap_boxes.append(overlap_box)
+                gather.extend(gatherer)
+                del gatherer
         else:
+            overlap_box[0] = overlap_elem
             overlap_boxes.append(overlap_box)
-        return overlap_boxes
-
-    def detect_yoverlap(self, boxes, margin = 0.8, threshold = 15, discriminate = False):
-        overlap_boxes = []
-        overlap_box = [-1,-1,-1,-1,-1]
-        overlap_elem = []
-        if discriminate:
-            discri = self.discriminate_textboxes(boxes)
-        for box in boxes:
-            if(overlap_box[4] == -1):
-                overlap_box = copy.deepcopy(box)
-                if isinstance(box[0],list):
-                    overlap_elem.extend(box[0])
-                else:
-                    overlap_elem.append(box[0])
-                continue
-            if(self.overlap(overlap_box, box,margin,threshold,x_direction = False)):
-                overlap_box[1] = min(box[1],overlap_box[1])
-                overlap_box[2] = max(box[2],overlap_box[2])
-                overlap_box[3] = min(box[3],overlap_box[3])
-                overlap_box[4] = max(box[4],overlap_box[4])
-                if isinstance(box[0], list):
-                    overlap_elem.extend(box[0])
-                else:
-                    overlap_elem.append(box[0])
-            else:
-                if not discriminate:
-                    overlap_box[0] = overlap_elem
-                    overlap_boxes.append(overlap_box)
-                else:
-                    count = 0
-                    for elem in overlap_elem:
-                        if elem in discri:
-                            count = count+1
-                        else:
-                            count = count-1
-                    if(count > 0):
-                        overlap_box[0] = overlap_elem
-                        overlap_boxes.append(overlap_box)
-                overlap_box = copy.deepcopy(box)
-                del overlap_elem
-                overlap_elem = []
-                if isinstance(box[0], list):
-                    overlap_elem.extend(box[0])
-                else:
-                    overlap_elem.append(box[0])
-        count = 0
-        if discriminate:
-            for elem in overlap_elem:
-                if elem in discri:
-                    count = count+1
-                else:
-                    count = count-1
-            if(count > 0):
-                overlap_boxes.append(overlap_box)
-        else:
-            overlap_boxes.append(overlap_box)
+            gather.extend(gatherer)
+            del gatherer
+        if get:
+            return overlap_boxes, gather
         return overlap_boxes
 
     def overlap(self,box1,box2,p,d, x_direction = True):
@@ -286,7 +274,7 @@ class post:
         #plt.xlabel("Bins")
         #plt.ylabel("# of Pixcels")
         features = []
-        p = 0.3
+        p = 0.30
         over = 0
         threshold = p * (box[2]-box[1]) *(box[4]-box[3])
         for (chan, color) in zip(chans, colors):
@@ -295,7 +283,7 @@ class post:
             #plt.plot(hist, color=color)
             #plt.xlim([0, 256])
             over = over + np.where(hist >= threshold)[0].shape[0]
-        #print(box[0],over)
+        #print(over,box[0])
         if(over>=3):
             return True
         else:
@@ -306,7 +294,10 @@ class post:
         result = []
         for box in boxes:
             if(self.discriminate_textbox(box)):
-                result.append(box[0])
+                if isinstance(box[0],list):
+                    result.extend(box[0])
+                else:
+                    result.append(box[0])
         return result
 
     def check_size(self,boxes):
@@ -391,21 +382,84 @@ class post:
         #plt.show()
         return tuple(Color)
 
-    def get_textbox(self):
-        box = self.get_jsonbox()
-        sized_box = self.check_size(box)
-        xoverlap_box = self.detect_xoverlap(sized_box, discriminate= True)
-        xyoverlap_box = self.detect_yoverlap(xoverlap_box, margin = 0.6, discriminate = False)
-        self.erase_text(xyoverlap_box, None)
-        return xyoverlap_box
+    def get_largest_box(self, boxes, merge):
+
+        img_size = self.original_image.size
+        temp_image = copy.deepcopy(self.original_image)
+        self.erase_text(boxes, None, False, temp_image)
+        img_draw = ImageDraw.Draw(self.original_image)
+        gray_image = np.array(temp_image.convert('L'))
+        ret, dst = cv2.threshold(gray_image, 40, 255, cv2.THRESH_BINARY)
+        #plt.imshow(dst,'gray')
+        #plt.show()
+        color = 255
+        textbox = []
+
+        for merge_list in merge:
+            max = [0, 0, 0, 0, 0, 0]
+            for box in boxes:
+                if box[0][0] in merge_list:
+                    y_top = 0
+                    y_bot = 0
+                    x_left = box[3]
+                    x_right = box[4]
+                    for length in range(box[1]):
+                        color_left = dst[box[1] - length, x_left]
+                        color_right = dst[box[1] - length, x_right]
+                        if (abs(color_left - color) > 10 or abs(color_right - color)):
+                            y_top = box[1] - length
+                            break
+                    for length in range(img_size[1] - box[2]):
+                        color_left = dst[box[2] + length, x_left]
+                        color_right = dst[box[2] + length, x_right]
+                        if (abs(color_left - color) > 10 or abs(color_right - color)):
+                            y_bot = box[2] + length
+                            break
+                    if (max[2] - max[1]) * (max[4] - max[3]) < (y_bot - y_top) * (x_right - x_left):
+                        max[1] = y_top
+                        max[2] = y_bot
+                        max[3] = x_left
+                        max[4] = x_right
+                        max[5] = abs(box[2] - box[1])
+
+            max[0] = merge_list
+            textbox.append(max)
+
+        return textbox
+
+    def check_chunk(self, boxes):
+        result = []
+        for box in boxes:
+            if isinstance(box, list) and len(box[0]) > 1:
+                result.append(box)
+        return result
 
     def get_textbox2(self):
         box = self.get_jsonbox()
         sized_box = self.check_size(box)
-        xoverlap_box = self.detect_xoverlap(sized_box, discriminate = True)
+        xoverlap_box = self.detect_overlap(sized_box, discriminate = False)
         xdetect_box = self.detect_box(xoverlap_box)
-        xxoverlap_box = self.detect_xoverlap(xdetect_box)
-        self.erase_text(xxoverlap_box, None)
+        xxoverlap_box = self.detect_overlap(xdetect_box,discriminate = False)
+        overlap_box = self.detect_overlap(xxoverlap_box,0.5,discriminate=True, x_direction = False)
+        merge = []
+        for i in range(len(overlap_box)):
+            merge.append(overlap_box[i][0])
+        textbox = self.get_largest_box(xxoverlap_box, merge)
+        self.erase_text(overlap_box,(0,0,0),False)
+        #self.erase_text(textbox, (255, 0, 0))
+
+    def get_textbox3(self):
+        box = self.get_jsonbox()
+        sized_box = self.check_size(box)
+        xoverlap_box = self.detect_overlap(sized_box, discriminate=False)
+        xdetect_box = self.detect_box(xoverlap_box)
+        xxoverlap_box = self.detect_overlap(xdetect_box, discriminate=False)
+        overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, discriminate=True, x_direction=False, get = True)
+        xcoverlap_box = self.check_chunk(xxoverlap_box)
+        self.erase_text(xxoverlap_box, None, False)
+        #self.erase_text(box,(255,0,0),False)
+        #self.erase_text(overlap_box, None, False)
+        return overlap_box
 
 
 class TextBox:
@@ -476,47 +530,25 @@ class TextBox:
 
 
 def main():
-    a = post("8")
-    a.get_textbox2()
+
+    a = post(str(5))
+    a.get_textbox3()
     #a.erase_text(a.get_jsonbox(), (255, 0, 0), True)
     #a.erase_text_candi(a.get_jsonbox(), (0, 255, 0), True)
     plt.imshow(a.original_image)
     plt.show()
-    def temp():
-        input_sentence = "my name is J"
-        for i in range(16):
-            a= post(str(i))
-            textbox = a.get_textbox()
-            for i in range(len(textbox)):
-                textbox_Position = (textbox[i][3], textbox[i][1])
-                textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
-                default_font_size = textbox[i][2] - textbox[i][1]
-                textBox01 = TextBox(a.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
-                textBox01.generateText()
-            a.original_image.save(os.path.join('..', 'ex_result', a.name + '.jpg'))
-    #a.erase_text(a.get_jsonbox(), (255, 0, 0), True)
-    #a.erase_text_candi(a.get_jsonbox(), (0, 255, 0), True)
-    #a.erase_text(a.detect_xoverlap(a.get_jsonbox(),threshold=30,discriminate=True),(255,0,255),boundary=True)
 
-    #xoverlap_box = a.detect_xoverlap(a.check_size(a.get_jsonbox()),threshold=30,discriminate=True)
-    #overlap_box = a.detect_yoverlap(xoverlap_box, margin=0.5)
-    #detect_box = a.detect_box(overlap_box)
-    #a.erase_text(overlap_box,None,boundary=False)
-    #box = a.get_jsonbox()
-    #a.check_size(box)
-    #a.discriminate_textbox(box[60])
-
-
-
-
-
-    #overlap_box = a.detect_xoverlap(3,10)
-    #detected_box = a.detect_box(3,10,overlap_box)
-    #a.erase_text(detected_box,(255,255,255))
-    #merge_box = a.merge_box(detected_box,7)
-    #textbox = a.get_textbox(detected_box, merge_box, a.original_image)
-    #input_sentence = """My name is Hana."""
-
+    input_sentence = "my name is J"
+    # for i in range(16):
+    #     a= post(str(i))
+    #      textbox = a.get_textbox3()
+    #      for i in range(len(textbox)):
+    #          textbox_Position = (textbox[i][3], textbox[i][1])
+    #          textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
+    #          default_font_size = textbox[i][2] - textbox[i][1]
+    #          textBox01 = TextBox(a.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
+    #          textBox01.generateText()
+    #     a.original_image.save(os.path.join('..', 'ex_result', a.name + '.jpg'))
     '''
     for i in range(len(textbox)):
         if(textbox[i][4] == 69):
@@ -526,7 +558,7 @@ def main():
         default_font_size = textbox[i][4]
         textBox01 = TextBox(im, input_sentence, textbox_Position, textbox_Size, default_font_size)
         textBox01.generateText()
-'''
+    '''
     #plt.imshow(a.original_image)
     #plt.imshow(a.original_image)
     #plt.show()
