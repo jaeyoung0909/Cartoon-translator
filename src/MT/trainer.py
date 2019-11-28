@@ -2,6 +2,7 @@ import time
 import math
 import random
 
+import os
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -26,6 +27,12 @@ class Trainer:
         # Test mode
         else:
             self.test_iter = test_iter
+
+        ckpt_path=os.path.join(os.getcwd(), 'model.pt')
+        if os.path.exist(ckpt_path):
+            ckpt=torch.load(ckpt_path)
+            self.model.load_state_dict(ckpt)
+            print("load parameters from pre-trained model")
 
         self.model = Transformer(self.params)
         self.model.to(self.params.device)
