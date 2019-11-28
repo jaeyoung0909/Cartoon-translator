@@ -1,4 +1,4 @@
-import io 
+import io
 import json
 from google.protobuf.json_format import MessageToJson
 
@@ -21,11 +21,12 @@ def detect_text(path):
 
 def save_json(img_path, dest):
     texts = detect_text(img_path)
-    
+
     with open(dest, 'w', encoding='utf-8') as f:
         json.dump(texts, f, ensure_ascii=False, indent=4)
 
-for i in range(17):
-    save_json('../ex_img/{}.jpg'.format(i), '../ex_json/{}.json'.format(i))
-# save_json('../../ex.jpg', '../../ex.json')
+# print(detect_text('combined_img.jpg'))
+#for i in range(17):
+#    save_json('../ex_img/{}.jpg'.format(i), '../ex_json/{}.json'.format(i))
+save_json('combined_img.jpg', '../../combined_img.json')
 # print([d.description for d in detect_text('../../ex.jpg')])
