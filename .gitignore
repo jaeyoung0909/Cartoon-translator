@@ -1,5 +1,9 @@
 EAST/
 */model.pt
+
+# fairseq pt file
+*/checkpoint77.pt
+
 # Created by https://www.gitignore.io/api/linux,python,opencv,visualstudiocode
 # Edit at https://www.gitignore.io/?templates=linux,python,opencv,visualstudiocode
 
