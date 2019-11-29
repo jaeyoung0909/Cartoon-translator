@@ -58,19 +58,11 @@ def main(args, src):
     ret = []
     utils.import_user_module(args)
 
-    # if args.buffer_size < 1:
-    #     args.buffer_size = 1
     if args.max_tokens is None and args.max_sentences is None:
         args.max_sentences = 1
-    print(args.sampling)
-    print(args.nbest)
-    print(args.beam)
+
     assert not args.sampling or args.nbest == args.beam, \
         '--sampling requires --nbest to be equal to --beam'
-    # assert not args.max_sentences or args.max_sentences <= args.buffer_size, \
-    #     '--max-sentences/--batch-size cannot be larger than --buffer-size'
-
-    print(args)
 
     use_cuda = torch.cuda.is_available() and not args.cpu
 
@@ -78,7 +70,6 @@ def main(args, src):
     task = tasks.setup_task(args)
 
     # Load ensemble
-    print('| loading model(s) from {}'.format(args.path))
     models, _model_args = checkpoint_utils.load_model_ensemble(
         args.path.split(':'),
         arg_overrides=eval(args.model_overrides),
@@ -106,8 +97,6 @@ def main(args, src):
     # Handle tokenization and BPE
     tokenizer = None
     bpe = encoders.build_bpe(args)
-    print("check2")
-    print(bpe)
 
     def encode_fn(x):
         if tokenizer is not None:
@@ -123,8 +112,6 @@ def main(args, src):
             x = tokenizer.decode(x)
         return x
 
-    # Load alignment dictionary for unknown word replacement
-    # (None if no unknown word replacement, empty if no path to align dictionary)
     align_dict = utils.load_align_dict(args.replace_unk)
 
     max_positions = utils.resolve_max_positions(
@@ -132,25 +119,15 @@ def main(args, src):
         *[model.max_positions() for model in models]
     )
 
-    # if args.buffer_size > 1:
-    #     print('| Sentence buffer size:', args.buffer_size)
-    print('| Type the input sentence and press return:')
     start_id = 0
-    print("check1")
-    # for inputs in buffered_read(args.input, args.buffer_size):
     inputs = src
     results = []
-    print(inputs)
     for batch in make_batches(inputs, args, task, max_positions, encode_fn):
         src_tokens = batch.src_tokens
         src_lengths = batch.src_lengths
         if use_cuda:
             src_tokens = src_tokens.cuda()
             src_lengths = src_lengths.cuda()
-        print("src tokens :")
-        print(src_tokens)
-        print("src lengths :")
-        print(src_lengths)
         sample = {
             'net_input': {
                 'src_tokens': src_tokens,
@@ -166,7 +143,6 @@ def main(args, src):
     for id, src_tokens, hypos in sorted(results, key=lambda x: x[0]):
         if src_dict is not None:
             src_str = src_dict.string(src_tokens, args.remove_bpe)
-            print('S-{}\t{}'.format(id, src_str))
 
         # Process top predictions
         for hypo in hypos[:min(len(hypos), args.nbest)]:
@@ -179,41 +155,32 @@ def main(args, src):
                 remove_bpe=args.remove_bpe,
             )
             hypo_str = decode_fn(hypo_str)
-            print('H-{}\t{}\t{}'.format(id, hypo['score'], hypo_str))
             ret.append(hypo_str)
-            print('P-{}\t{}'.format(
-                id,
-                ' '.join(map(lambda x: '{:.4f}'.format(x), hypo['positional_scores'].tolist()))
-            ))
-            if args.print_alignment:
-                alignment_str = " ".join(["{}-{}".format(src, tgt) for src, tgt in alignment])
-                print('A-{}\t{}'.format(
-                    id,
-                    alignment_str
-                ))
 
-    # update running id counter
-    start_id += len(inputs)
     return ret
 
 
-def cli_main():
-    flag = True 
-    #flag = False
-    if flag:
-        parser = options.get_generation_parser(interactive=False)
-        args = options.parse_args_and_arch(parser)
-    else:
-        import argparse
-        args = argparse.ArgumentParser(allow_abbrev=False)
-        args.max_tokens = None
-        args.max_sentences = None
-        args.sampling = False
-        args.nbest = 1 
-        args.beam = 5
-    ret = main(args, ["안녕하세요 제 이름은 조쉬구요. 영국 남자에요.", "기수형 자러 가자!", "그냥 이렇게 쓸까", "이정도면 되겠지"])
-    print(ret)
+def translator(inputs, path='ckpt/checkpoint77.pt', vocab='wiki.ko.model'):
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.set_defaults(beam=5, bpe='sentencepiece', cpu=False, criterion='cross_entropy', data='.', dataset_impl=None,
+     decoding_format=None, diverse_beam_groups=-1, diverse_beam_strength=0.5, empty_cache_freq=0, force_anneal=None, fp16=False, 
+     fp16_init_scale=128, fp16_scale_tolerance=0.0, fp16_scale_window=None, gen_subset='test', iter_decode_eos_penalty=0.0, 
+     iter_decode_force_max_iter=False, iter_decode_max_iter=10, lazy_load=False, left_pad_source='True', left_pad_target='False', 
+     lenpen=1, load_alignments=False, log_format=None, log_interval=1000, lr_scheduler='fixed', lr_shrink=0.1, match_source_len=False, 
+     max_len_a=0, max_len_b=200, max_sentences=None, max_source_positions=1024, max_target_positions=1024, max_tokens=None, 
+     memory_efficient_fp16=False, min_len=1, min_loss_scale=0.0001, model_overrides='{}', momentum=0.99, nbest=1, no_beamable_mm=False, 
+     no_early_stop=False, no_progress_bar=False, no_repeat_ngram_size=0, num_shards=1, num_workers=1, optimizer='nag', 
+     path=path, prefix_size=0, print_alignment=False, print_step=False, quiet=False, raw_text=False, remove_bpe=None, 
+     replace_unk=None, required_batch_size_multiple=8, results_path=None, retain_iter_history=False, sacrebleu=False, sampling=False, 
+     sampling_topk=-1, sampling_topp=-1.0, score_reference=False, seed=1, sentencepiece_vocab=vocab, shard_id=0, 
+     skip_invalid_size_inputs_valid_test=False, source_lang='ko', target_lang='en', task='translation', temperature=1.0, 
+     tensorboard_logdir='', threshold_loss_scale=None, tokenizer=None, truncate_source=False, unkpen=0, unnormalized=False, 
+     upsample_primary=1, user_dir=None, warmup_updates=0, weight_decay=0.0)
+    args = parser.parse_args([])
+    return main(args, inputs)
+    
 
 
 if __name__ == '__main__':
-    cli_main()
+    print(translator(["안녕하세요 제 이름은 조쉬구요. 영국 남자에요.", "기수형 자러 가자!", "그냥 이렇게 쓸까", "이정도면 되겠지"]))
