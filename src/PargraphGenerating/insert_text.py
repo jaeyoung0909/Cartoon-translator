@@ -12,7 +12,7 @@ class post:
 
     def __init__(self, name):
         self.name = name
-        image_path = os.path.join('..','ex_img', name+'.jpg')
+        image_path = os.path.join('..','ex_img', "0"+name+'.jpg')
         print(image_path)
         if os.path.isfile(image_path):
             image = Image.open(image_path)
@@ -33,7 +33,7 @@ class post:
                 os.mkdir(replace_json_dir)
 
             f = open(json_path,'r')
-            f_replace = open(replace_json_path,'w',encoding='utf-8')
+            f_replace = open(replace_json_path,'w')
             lines = f.readlines()
 
             for line in lines:
@@ -44,7 +44,7 @@ class post:
 
             with open(replace_json_path) as json_file:
                 json_data = json.load(json_file)
-                print(json.dumps(json_data, indent = '\t'))
+
         else:
             raise Exception('There is no "{0}" json file'.format(self.name))
 
@@ -118,6 +118,15 @@ class post:
             if i == 0:
                 continue
             coor_data = data[i]['boundingPoly']['vertices']
+            box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
+            jsonbox.append(box)
+        return jsonbox
+
+    def get_jsonbox2(self):
+        jsonbox = []
+        data = self.json_data['fullTextAnnotation']['pages'][0]['blocks']
+        for i in range(len(data)):
+            coor_data = data[i]['boundingBox']['vertices']
             box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
             jsonbox.append(box)
         return jsonbox
@@ -455,13 +464,28 @@ class post:
         xoverlap_box = self.detect_overlap(sized_box, discriminate=False)
         xdetect_box = self.detect_box(xoverlap_box)
         xxoverlap_box = self.detect_overlap(xdetect_box, discriminate=False)
+
         overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, discriminate=True, x_direction=False, get = True)
         xcoverlap_box = self.check_chunk(xxoverlap_box)
-        self.erase_text(xxoverlap_box, None, False)
+        self.erase_text(xxoverlap_box, None, False, None, gather)
         #self.erase_text(box,(255,0,0),False)
-        #self.erase_text(overlap_box, None, False)
+        #self.erase_text(overlap_box, (255,0,0), True)
         return overlap_box
 
+    def get_text(self, boxes):
+        text = []
+        data = self.json_data['textAnnotations']
+        for box in boxes:
+            s = ""
+            if isinstance(box[0],list):
+                for elem in box[0]:
+                    ko = data[elem]['description']
+                    ko = ko.replace('%','\\').encode("UTF-8").decode('unicode_escape')
+                    s = s + ko + " "
+            else:
+                s = s + data[box[0]]['description']
+            text.append(s)
+        return text
 
 class TextBox:
     def __init__(self,image,msg,box_position,box_size,default_font_size, font_style = 'FreeSans.ttf'):
@@ -488,7 +512,7 @@ class TextBox:
         self.textWidth = math.floor(self.box_W / (letter_w / 5))
         # print(letter_h - letter_h01)
 
-    def generateText(self):
+    def generateText(self, color):
         self.font_size = self.default_font_size
         self.font = ImageFont.truetype(font=self.font_style, size=self.font_size)
         self.generateParagraph()
@@ -502,13 +526,13 @@ class TextBox:
             self.font = ImageFont.truetype(font=self.font_style, size=self.font_size)
             self.textWidthHeightCalculator()
             self.generateParagraph()
-        self.draw.text((self.box_X + (self.box_W -self.message_paragraph_W) / 2, self.box_Y + (self.box_H - self.message_paragraph_H) / 2), self.message_paragraph, fill="black", font=self.font)
+        self.draw.text((self.box_X + (self.box_W -self.message_paragraph_W) / 2, self.box_Y + (self.box_H - self.message_paragraph_H) / 2), self.message_paragraph, fill=color, font=self.font)
 
 
 
     def generateParagraph(self):
         self.textWidthHeightCalculator()
-        if self.textWidth == 0:
+        if self.textWidth <= 0:
             return
         wrapper = textwrap.TextWrapper(width=self.textWidth)
         self.message_paragraph = "\n".join(wrapper.wrap(text=self.msg))
@@ -529,21 +553,46 @@ class TextBox:
         self.box_W = box_size[0]
         self.box_H = box_size[1]
 
+# def spacing_okt(wrongSentence):
+#     tagged = okt.pos(wrongSentence)
+#     corrected = ""
+#     for i in tagged:
+#         if i[1] in ('Josa', 'PreEomi', 'Eomi', 'Suffix', 'Punctuation'):
+#             corrected += i[0]
+#         else:
+#             corrected += " "+i[0]
+#     if corrected[0] == " ":
+#         corrected = corrected[1:]
+#     return corrected
+
 
 def main():
 
-    a = post("0")
-    a.get_textbox3()
+    a = post(str(9))
+    textbox = a.get_textbox3()
+    text = a.get_text(textbox)
     #a.erase_text(a.get_jsonbox(), (255, 0, 0), True)
     #a.erase_text_candi(a.get_jsonbox(), (0, 255, 0), True)
+
+
+    for i in range(len(textbox)):
+        input_sentence = "hello ohiyo bonjour ni hao ohla"
+        textbox_Position = (textbox[i][3], textbox[i][1])
+        textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
+        default_font_size = textbox[i][2] - textbox[i][1]
+        r,g,b = a.get_background_color(textbox[i])
+        print(r,g,b)
+        color = (abs(255-r),abs(255-g), abs(255-b))
+        textBox01 = TextBox(a.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
+        textBox01.generateText(color)
+    a.original_image.save(os.path.join('..', 'ex_result', a.name + '.jpg'))
     plt.imshow(a.original_image)
     plt.show()
-
-    input_sentence = "my name is J"
     # for i in range(16):
+    #     input_sentence
     #     a= post(str(i))
-    #      textbox = a.get_textbox3()
-    #      for i in range(len(textbox)):
+    #     textbox = a.get_textbox3()
+    #     for i in range(len(textbox)):
     #          textbox_Position = (textbox[i][3], textbox[i][1])
     #          textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
     #          default_font_size = textbox[i][2] - textbox[i][1]
@@ -563,6 +612,6 @@ def main():
     #plt.imshow(a.original_image)
     #plt.imshow(a.original_image)
     #plt.show()
-    a.original_image.save(os.path.join('..','ex_result', a.name+'.jpg'))
+
 
 main()
