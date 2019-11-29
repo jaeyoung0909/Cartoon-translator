@@ -12,7 +12,7 @@ class post:
 
     def __init__(self, name):
         self.name = name
-        image_path = os.path.join('..','ex_img', "0"+name+'.jpg')
+        image_path = os.path.join('..','ex_img', name)
         print(image_path)
         if os.path.isfile(image_path):
             image = Image.open(image_path)
@@ -25,8 +25,9 @@ class post:
         del image
 
     def treat_json_file(self):
-        json_path = os.path.join('..','ex_json', self.name + '.json')
-        replace_json_path = os.path.join('..','ex_json', 'remove_breakline', self.name + '.json')
+        json_name = self.name.split(".")[0] + '.json'
+        json_path = os.path.join('..','ex_json', json_name)
+        replace_json_path = os.path.join('..','ex_json', 'remove_breakline', json_name)
         if os.path.isfile(json_path):
             replace_json_dir = os.path.join('..','ex_json', 'remove_breakline')
             if not os.path.exists(replace_json_dir):
@@ -37,7 +38,8 @@ class post:
             lines = f.readlines()
 
             for line in lines:
-                f_replace.write(line.replace('\\n', ' ').replace(r'\\','%').replace('\\','').strip('"'))
+                l = line.replace(r'"\\\"','"').replace(r'\\"',"").replace("'",'')
+                f_replace.write(l.replace('\\n', ' ').replace(r'\\','%').replace('\\','').strip('"'))
 
             f.close()
             f_replace.close()
@@ -117,21 +119,15 @@ class post:
         for i in range(len(data)):
             if i == 0:
                 continue
-            coor_data = data[i]['boundingPoly']['vertices']
-            box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
-            jsonbox.append(box)
+            try:
+                coor_data = data[i]['boundingPoly']['vertices']
+                box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
+                jsonbox.append(box)
+            except:
+                print("json file has wrong format")
         return jsonbox
 
-    def get_jsonbox2(self):
-        jsonbox = []
-        data = self.json_data['fullTextAnnotation']['pages'][0]['blocks']
-        for i in range(len(data)):
-            coor_data = data[i]['boundingBox']['vertices']
-            box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
-            jsonbox.append(box)
-        return jsonbox
-
-    def detect_overlap(self, boxes, margin=0.8, threshold=15, discriminate = False, x_direction = True, get = False):
+    def detect_overlap(self, boxes, overlapping=0.8, distance=15, discriminate = False, x_direction = True, get = False):
         overlap_boxes = []
         gather = []
         gatherer = []
@@ -148,7 +144,7 @@ class post:
                 else:
                     overlap_elem.append(box[0])
                 continue
-            if(self.overlap(overlap_box, box,margin,threshold, x_direction)):
+            if(self.overlap(overlap_box, box,overlapping,distance, x_direction)):
                 overlap_box[1] = min(box[1],overlap_box[1])
                 overlap_box[2] = max(box[2],overlap_box[2])
                 overlap_box[3] = min(box[3],overlap_box[3])
@@ -163,8 +159,6 @@ class post:
                     overlap_box[0] = overlap_elem
                     overlap_boxes.append(overlap_box)
                     gather.extend(gatherer)
-                    del gatherer
-                    gatherer = []
                 else:
                     count = 0
                     for elem in overlap_elem:
@@ -176,10 +170,10 @@ class post:
                         overlap_box[0] = overlap_elem
                         overlap_boxes.append(overlap_box)
                         gather.extend(gatherer)
-                overlap_box = copy.deepcopy(box)
                 del overlap_elem
-                overlap_elem = []
                 del gatherer
+                overlap_box = copy.deepcopy(box)
+                overlap_elem = []
                 gatherer = []
                 gatherer.append(i)
                 if isinstance(box[0], list):
@@ -197,12 +191,10 @@ class post:
                 overlap_box[0] = overlap_elem
                 overlap_boxes.append(overlap_box)
                 gather.extend(gatherer)
-                del gatherer
         else:
             overlap_box[0] = overlap_elem
             overlap_boxes.append(overlap_box)
             gather.extend(gatherer)
-            del gatherer
         if get:
             return overlap_boxes, gather
         return overlap_boxes
@@ -279,26 +271,21 @@ class post:
         colors = ("r", "g", "b")
         mask = np.zeros(np.array(img).shape[:2], np.uint8)
         mask[box[1]:box[2], box[3]:box[4]] = 255;
-        #plt.figure()
-        #plt.title("Color Histogram")
-        #plt.xlabel("Bins")
-        #plt.ylabel("# of Pixcels")
+
         features = []
         p = 0.30
         over = 0
         threshold = p * (box[2]-box[1]) *(box[4]-box[3])
+
         for (chan, color) in zip(chans, colors):
             hist = cv2.calcHist([chan], [0], mask, [32], [0, 256])
             features.append(hist)
-            #plt.plot(hist, color=color)
-            #plt.xlim([0, 256])
             over = over + np.where(hist >= threshold)[0].shape[0]
-        #print(over,box[0])
+
         if(over>=3):
             return True
         else:
             return False
-        #plt.show()
 
     def discriminate_textboxes(self,boxes):
         result = []
@@ -335,8 +322,7 @@ class post:
 
         gray_image = np.array(temp_image.convert('L'))
         ret, dst = cv2.threshold(gray_image, 40, 255, cv2.THRESH_BINARY)
-        #plt.imshow(dst)
-        #plt.show()
+
         for box in overlap_boxes:
             color = 255
             x_left = -1
@@ -376,20 +362,13 @@ class post:
         mask = np.zeros(np.array(img).shape[:2], np.uint8)
         mask[box[1]:box[2], box[3]:box[4]] = 255;
         Color = []
-        #plt.figure()
-        #plt.title("Color Histogram")
-        #plt.xlabel("Bins")
-        #plt.ylabel("# of Pixcels")
         features = []
 
         for (chan, color) in zip(chans, colors):
             hist = cv2.calcHist([chan], [0], mask, [256], [0, 256])
             features.append(hist)
             Color.append(np.argmax(hist))
-            #plt.plot(hist, color=color)
-            #plt.xlim([0, 256])
-        "Flattened feature vector size: %d " % (np.array(features).flatten().shape)
-        #plt.show()
+
         return tuple(Color)
 
     def get_largest_box(self, boxes, merge):
@@ -400,8 +379,6 @@ class post:
         img_draw = ImageDraw.Draw(self.original_image)
         gray_image = np.array(temp_image.convert('L'))
         ret, dst = cv2.threshold(gray_image, 40, 255, cv2.THRESH_BINARY)
-        #plt.imshow(dst,'gray')
-        #plt.show()
         color = 255
         textbox = []
 
@@ -456,20 +433,17 @@ class post:
             merge.append(overlap_box[i][0])
         textbox = self.get_largest_box(xxoverlap_box, merge)
         self.erase_text(overlap_box,(0,0,0),False)
-        #self.erase_text(textbox, (255, 0, 0))
 
-    def get_textbox3(self):
+    def get_textbox(self):
         box = self.get_jsonbox()
         sized_box = self.check_size(box)
         xoverlap_box = self.detect_overlap(sized_box, discriminate=False)
         xdetect_box = self.detect_box(xoverlap_box)
         xxoverlap_box = self.detect_overlap(xdetect_box, discriminate=False)
 
-        overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, discriminate=True, x_direction=False, get = True)
+        overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, 3,discriminate=True, x_direction=False, get = True)
         xcoverlap_box = self.check_chunk(xxoverlap_box)
-        self.erase_text(xxoverlap_box, None, False, None, gather)
-        #self.erase_text(box,(255,0,0),False)
-        #self.erase_text(overlap_box, (255,0,0), True)
+        self.erase_text(xxoverlap_box, (255,0,0), True, None, gather)
         return overlap_box
 
     def get_text(self, boxes):
@@ -565,53 +539,35 @@ class TextBox:
 #         corrected = corrected[1:]
 #     return corrected
 
+def post_process(img_name):
 
-def main():
-
-    a = post(str(9))
-    textbox = a.get_textbox3()
-    text = a.get_text(textbox)
-    #a.erase_text(a.get_jsonbox(), (255, 0, 0), True)
-    #a.erase_text_candi(a.get_jsonbox(), (0, 255, 0), True)
-
-
+    Post_object = post(img_name)
+    textbox = Post_object.get_textbox()
+    text = Post_object.get_text(textbox)
     for i in range(len(textbox)):
-        input_sentence = "hello ohiyo bonjour ni hao ohla"
+        input_sentence = text[i]
         textbox_Position = (textbox[i][3], textbox[i][1])
         textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
         default_font_size = textbox[i][2] - textbox[i][1]
-        r,g,b = a.get_background_color(textbox[i])
+        r,g,b = Post_object.get_background_color(textbox[i])
         print(r,g,b)
         color = (abs(255-r),abs(255-g), abs(255-b))
-        textBox01 = TextBox(a.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
+        textBox01 = TextBox(Post_object.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
         textBox01.generateText(color)
-    a.original_image.save(os.path.join('..', 'ex_result', a.name + '.jpg'))
+    Post_object.original_image.save(os.path.join('..', 'ex_result', Post_object.name))
+
+
+def main():
+
+    a = post('15.jpg')
+    #a.erase_text(a.get_jsonbox(),(255,0,0),True)
+    textbox = a.get_textbox()
+    #text = a.get_text(textbox)
+
     plt.imshow(a.original_image)
     plt.show()
-    # for i in range(16):
-    #     input_sentence
-    #     a= post(str(i))
-    #     textbox = a.get_textbox3()
-    #     for i in range(len(textbox)):
-    #          textbox_Position = (textbox[i][3], textbox[i][1])
-    #          textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
-    #          default_font_size = textbox[i][2] - textbox[i][1]
-    #          textBox01 = TextBox(a.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
-    #          textBox01.generateText()
-    #     a.original_image.save(os.path.join('..', 'ex_result', a.name + '.jpg'))
-    '''
-    for i in range(len(textbox)):
-        if(textbox[i][4] == 69):
-            continue
-        textbox_Position = (textbox[i][2], textbox[i][0])
-        textbox_Size = (textbox[i][3]-textbox[i][2],textbox[i][1]-textbox[i][0])
-        default_font_size = textbox[i][4]
-        textBox01 = TextBox(im, input_sentence, textbox_Position, textbox_Size, default_font_size)
-        textBox01.generateText()
-    '''
-    #plt.imshow(a.original_image)
-    #plt.imshow(a.original_image)
-    #plt.show()
+
+
 
 
 main()
