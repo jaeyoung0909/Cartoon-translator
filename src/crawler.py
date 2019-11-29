@@ -21,5 +21,7 @@ def imgDownload (url, path):
         os.makedirs(path)
     imgs = imgCrawler(url)
     for i, img in enumerate(imgs):
-        url2img(path + '/{}.jpg'.format(i), img)
+        url2img(os.path.join(path , str(i).zfill(2)+'.jpg'), img)
 
+
+imgDownload("https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=183&weekday=sat", "./ex_img" )
