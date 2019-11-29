@@ -443,7 +443,7 @@ class post:
 
         overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, 3,discriminate=True, x_direction=False, get = True)
         xcoverlap_box = self.check_chunk(xxoverlap_box)
-        self.erase_text(xxoverlap_box, (255,0,0), True, None, gather)
+        self.erase_text(xxoverlap_box, None, False, None, gather)
         return overlap_box
 
     def get_text(self, boxes):
@@ -550,7 +550,6 @@ def post_process(img_name):
         textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
         default_font_size = textbox[i][2] - textbox[i][1]
         r,g,b = Post_object.get_background_color(textbox[i])
-        print(r,g,b)
         color = (abs(255-r),abs(255-g), abs(255-b))
         textBox01 = TextBox(Post_object.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
         textBox01.generateText(color)
@@ -558,14 +557,8 @@ def post_process(img_name):
 
 
 def main():
+    post_process("15.jpg")
 
-    a = post('15.jpg')
-    #a.erase_text(a.get_jsonbox(),(255,0,0),True)
-    textbox = a.get_textbox()
-    #text = a.get_text(textbox)
-
-    plt.imshow(a.original_image)
-    plt.show()
 
 
 
