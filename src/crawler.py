@@ -8,6 +8,11 @@ def url2img (filename, url):
     response = request.urlopen(req).read()
     open(filename, 'wb').write(response)
 
+def urls2byteImgs(urls):
+    return [request.urlopen( request.Request(i, headers={'User-Agent': 'Mozilla/5.0'}) ).read() for i in urls]
+
+
+
 def imgCrawler (url):
     req = request.Request(url)
     response = request.urlopen(req).read()
@@ -23,5 +28,9 @@ def imgDownload (url, path):
     for i, img in enumerate(imgs):
         url2img(os.path.join(path , str(i).zfill(2)+'.jpg'), img)
 
+def byteImgDownload (url):
+    urls = imgCrawler(url)
+    return urls2byteImgs(urls)
 
-imgDownload("https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=183&weekday=sat", "./ex_img" )
+
+# imgDownload("https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=183&weekday=sat", "./ex_img" )

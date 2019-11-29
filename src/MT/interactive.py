@@ -160,10 +160,10 @@ def main(args, src):
     return ret
 
 
-def translator(inputs, path='ckpt/checkpoint77.pt', vocab='wiki.ko.model'):
+def translator(inputs, path='ckpt/checkpoint77.pt', vocab='wiki.ko.model', data='.'):
     import argparse
     parser = argparse.ArgumentParser()
-    parser.set_defaults(beam=5, bpe='sentencepiece', cpu=False, criterion='cross_entropy', data='.', dataset_impl=None,
+    parser.set_defaults(beam=5, bpe='sentencepiece', cpu=False, criterion='cross_entropy', data=data, dataset_impl=None,
      decoding_format=None, diverse_beam_groups=-1, diverse_beam_strength=0.5, empty_cache_freq=0, force_anneal=None, fp16=False, 
      fp16_init_scale=128, fp16_scale_tolerance=0.0, fp16_scale_window=None, gen_subset='test', iter_decode_eos_penalty=0.0, 
      iter_decode_force_max_iter=False, iter_decode_max_iter=10, lazy_load=False, left_pad_source='True', left_pad_target='False', 

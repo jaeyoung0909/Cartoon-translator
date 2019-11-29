@@ -19,6 +19,15 @@ def detect_text(path):
     return texts
     # text in texts has attributes named description and bounding_poly
 
+def detect_text_from_byte(img):
+    from google.cloud import vision
+    client = vision.ImageAnnotatorClient()
+    image = vision.types.Image(content=img)
+
+    response = client.text_detection(image=image)
+    texts = MessageToJson(response)
+    return texts
+
 def save_json(img_path, dest):
     texts = detect_text(img_path)
 
@@ -28,5 +37,5 @@ def save_json(img_path, dest):
 # print(detect_text('combined_img.jpg'))
 #for i in range(17):
 #    save_json('../ex_img/{}.jpg'.format(i), '../ex_json/{}.json'.format(i))
-save_json('combined_img.jpg', '../../combined_img.json')
+# save_json('combined_img.jpg', '../../combined_img.json')
 # print([d.description for d in detect_text('../../ex.jpg')])

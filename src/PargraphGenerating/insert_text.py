@@ -8,21 +8,31 @@ import numpy as np
 import textwrap
 import math
 
-class post:
+class Post:
 
-    def __init__(self, name):
-        self.name = name
-        image_path = os.path.join('..','ex_img', name)
-        print(image_path)
-        if os.path.isfile(image_path):
-            image = Image.open(image_path)
-        else:
-            raise Exception('There is no "{0}" image file'.format(name))
+    # def __init__(self, name):
+    #     self.name = name
+    #     image_path = os.path.join('..','ex_img', name)
+    #     print(image_path)
+    #     if os.path.isfile(image_path):
+    #         image = Image.open(image_path)
+    #     else:
+    #         raise Exception('There is no "{0}" image file'.format(name))
+    #     img_array = np.array(image)
+    #     dst = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
+    #     self.original_image = Image.fromarray(dst,'RGB')
+    #     self.json_data = self.treat_json_file()
+    #     del image
+
+    def __init__(self,image,json_file):
+        self.name = 'a'
         img_array = np.array(image)
         dst = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
         self.original_image = Image.fromarray(dst,'RGB')
-        self.json_data = self.treat_json_file()
-        del image
+        plt.imshow(self.original_image)
+        plt.show()
+        # self.original_image = image
+        self.json_data = json.loads(json_file)
 
     def treat_json_file(self):
         json_name = self.name.split(".")[0] + '.json'
@@ -53,6 +63,8 @@ class post:
         return json_data
 
     def erase_text(self, boxes, color=(255,255,255), boundary = False, img = None, index = None):
+        if boxes is None:
+            return
         if(img is None):
             img_draw = ImageDraw.Draw(self.original_image)
         else:
@@ -115,6 +127,8 @@ class post:
 
     def get_jsonbox(self):
         jsonbox = []
+        if not 'textAnnotations'in self.json_data.keys():
+            return
         data = self.json_data['textAnnotations']
         for i in range(len(data)):
             if i == 0:
@@ -128,6 +142,7 @@ class post:
         return jsonbox
 
     def detect_overlap(self, boxes, overlapping=0.8, distance=15, discriminate = False, x_direction = True, get = False):
+        
         overlap_boxes = []
         gather = []
         gatherer = []
@@ -270,10 +285,10 @@ class post:
         chans = cv2.split(np.array(img))
         colors = ("r", "g", "b")
         mask = np.zeros(np.array(img).shape[:2], np.uint8)
-        mask[box[1]:box[2], box[3]:box[4]] = 255;
+        mask[box[1]:box[2], box[3]:box[4]] = 255
 
         features = []
-        p = 0.30
+        p = 0.25
         over = 0
         threshold = p * (box[2]-box[1]) *(box[4]-box[3])
 
@@ -321,8 +336,7 @@ class post:
             img_draw.rectangle([(box[3], box[1]), (box[4], box[2])], fill= color)
 
         gray_image = np.array(temp_image.convert('L'))
-        ret, dst = cv2.threshold(gray_image, 40, 255, cv2.THRESH_BINARY)
-
+        ret, dst = cv2.threshold(gray_image, 150, 255, cv2.THRESH_BINARY)
         for box in overlap_boxes:
             color = 255
             x_left = -1
@@ -440,8 +454,7 @@ class post:
         xoverlap_box = self.detect_overlap(sized_box, discriminate=False)
         xdetect_box = self.detect_box(xoverlap_box)
         xxoverlap_box = self.detect_overlap(xdetect_box, discriminate=False)
-
-        overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, 3,discriminate=True, x_direction=False, get = True)
+        overlap_box, gather = self.detect_overlap(xxoverlap_box, 0.5, 30,discriminate=True, x_direction=False, get = True)
         xcoverlap_box = self.check_chunk(xxoverlap_box)
         self.erase_text(xxoverlap_box, None, False, None, gather)
         return overlap_box
@@ -454,12 +467,15 @@ class post:
             if isinstance(box[0],list):
                 for elem in box[0]:
                     ko = data[elem]['description']
-                    ko = ko.replace('%','\\').encode("UTF-8").decode('unicode_escape')
+                    # print(ko)
+                    ko.encode('UTF-8')
+                    # ko = ko.encode("UTF-8").decode('unicode_escape')
                     s = s + ko + " "
             else:
                 s = s + data[box[0]]['description']
             text.append(s)
         return text
+
 
 class TextBox:
     def __init__(self,image,msg,box_position,box_size,default_font_size, font_style = 'FreeSans.ttf'):
@@ -539,11 +555,12 @@ class TextBox:
 #         corrected = corrected[1:]
 #     return corrected
 
-def post_process(img_name):
+def post_process(src, dest):
 
-    Post_object = post(img_name)
+    Post_object = Post(src)
     textbox = Post_object.get_textbox()
     text = Post_object.get_text(textbox)
+
     for i in range(len(textbox)):
         input_sentence = text[i]
         textbox_Position = (textbox[i][3], textbox[i][1])
@@ -553,14 +570,10 @@ def post_process(img_name):
         color = (abs(255-r),abs(255-g), abs(255-b))
         textBox01 = TextBox(Post_object.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
         textBox01.generateText(color)
-    Post_object.original_image.save(os.path.join('..', 'ex_result', Post_object.name))
+    Post_object.original_image.save(dest)
 
+def remover():
+    return
+def inpainting():
+    return
 
-def main():
-    post_process("15.jpg")
-
-
-
-
-
-main()
