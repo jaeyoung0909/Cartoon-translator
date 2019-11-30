@@ -34,8 +34,3 @@ def save_json(img_path, dest):
     with open(dest, 'w', encoding='utf-8') as f:
         json.dump(texts, f, ensure_ascii=False, indent=4)
 
-# print(detect_text('combined_img.jpg'))
-#for i in range(17):
-#    save_json('../ex_img/{}.jpg'.format(i), '../ex_json/{}.json'.format(i))
-# save_json('combined_img.jpg', '../../combined_img.json')
-# print([d.description for d in detect_text('../../ex.jpg')])

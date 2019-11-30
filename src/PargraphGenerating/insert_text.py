@@ -475,9 +475,7 @@ class Post:
             if isinstance(box[0],list):
                 for elem in box[0]:
                     ko = data[elem]['description']
-                    # ko = ko.replace('%', '\\').encode("UTF-8").decode('unicode_escape')
                     ko.encode('UTF-8')
-                    #ko = ko.encode("UTF-8").decode('unicode_escape')
                     s = s + ko + " "
             else:
                 s = s + data[box[0]]['description'].encode('UTF-8')
@@ -500,7 +498,6 @@ class TextBox:
         self.font_size = default_font_size
         self.font_style = font_style
         self.font = ImageFont.truetype(font = font_style, size = self.font_size)
-        #print(os.getcwd())
         self.textWidth = 0
         self.message_paragraph = ""
         self.message_paragraph_W = 0;
@@ -511,7 +508,7 @@ class TextBox:
         letter_w01, letter_h01 = self.draw.textsize("Aaaaa", font=self.font)
         letter_w, letter_h = self.draw.textsize("Aaaaa\nAaaaa", font=self.font)
         self.textWidth = math.floor(self.box_W / (letter_w / 5))
-        # print(letter_h - letter_h01)
+       
 
     def generateText(self, color):
         self.font_size = self.default_font_size
@@ -523,7 +520,6 @@ class TextBox:
             self.font_size= math.floor(self.font_size * math.sqrt(self.box_H /self.message_paragraph_H))
 
             # To be safe
-            # self.font_size = math.floor(self.font_size * self.box_H / self.message_paragraph_H)
             self.font = ImageFont.truetype(font=self.font_style, size=self.font_size)
             self.textWidthHeightCalculator()
             self.generateParagraph()
@@ -566,13 +562,13 @@ def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.2 ,
 
         box = Post_object.get_jsonbox()
         if box is None:
-            Post_object.original_image.save(dst)
+            Post_object.setbox([])
+            Contents.append(Post_object)
             continue
         textbox = Post_object.get_textbox(x_overlapping, y_overlapping ,
             x_distance, y_distance, discriminative_power ,autotune)
         Post_object.setbox(textbox)
         text = Post_object.get_text(textbox)
-        #Post_object.erase_text(box,(255,0,0),True)
         Contents.append(Post_object)
 
         if isinstance(text, list):
@@ -605,7 +601,7 @@ def inpainting(Contents, Translated, font_path):
 
     return Contents
 
-def main2():
+def test():
     images_name = ["../ex_img/00.jpg","../ex_img/01.jpg","../ex_img/02.jpg","../ex_img/03.jpg","../ex_img/04.jpg"]
     json_file_names = ["../ex_json/0.json","../ex_json/1.json","../ex_json/2.json","../ex_json/3.json","../ex_json/4.json"]
     replace_json_path = ["../ex_json/remove_breakline/0.json","../ex_json/remove_breakline/1.json"

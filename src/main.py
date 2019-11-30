@@ -22,7 +22,7 @@ def main(url):
     images = [cv2.imdecode(np.frombuffer(img, dtype=np.uint8), -1) for img in byteImgs]
     images = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in images]
 
-    ### remove text and insert translated text
+    # remove text and insert translated text
     Contents, Paragraphs = remover(images, json_files, discriminative_power = 0.55, autotune=True)
     # remove text
     translated = translator(Paragraphs, ckpt_path, vocab_path, data_path)

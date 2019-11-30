@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import glob, os
 
-# image_directory = '../ex_img/*.jpg'
 
 class PreProcessImages:
     def __init__(self,image_directory, dest):
@@ -36,6 +35,3 @@ class PreProcessByteImages:
         return encoded_image.tobytes()
 
 
-
-# combinedImage = PreProcessImages(image_directory)
-# combinedImage.saveCombinedImage()

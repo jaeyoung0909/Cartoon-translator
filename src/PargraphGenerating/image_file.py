@@ -48,7 +48,6 @@ class TextBox:
             self.font_size= math.floor(self.font_size * math.sqrt(self.box_H /self.message_paragraph_H))
 
             # To be safe
-            # self.font_size = math.floor(self.font_size * self.box_H / self.message_paragraph_H)
             self.font = ImageFont.truetype(font=self.font_style, size=self.font_size)
             self.textWidthHeightCalculator()
             self.generateParagraph()
@@ -77,20 +76,3 @@ class TextBox:
         self.box_W = box_size[0]
         self.box_H = box_size[1]
 
-
-textBox01 = TextBox(im,input_sentence,textbox_Position,textbox_Size,default_font_size, font_style = 'arial.ttf')
-textBox01.whiteBox()
-textBox01.generateText()
-
-textBox01.set_textbox((300,250),(100,100))
-
-textBox01.whiteBox()
-textBox01.generateText()
-
-textBox01.set_textbox((100,380),(300,100))
-
-textBox01.whiteBox()
-textBox01.generateText()
-
-textBox01.imageShow()
-textBox01.save()
