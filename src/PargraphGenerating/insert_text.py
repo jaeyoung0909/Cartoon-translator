@@ -141,12 +141,14 @@ class Post:
                 print("json file has wrong format")
         return jsonbox
 
-    def detect_overlap(self, boxes, overlapping=0.8, distance=15, discriminate = False, x_direction = True, get = False):
+    def detect_overlap(self, boxes, overlapping=0.8, distance=15, discriminate = False,
+                       x_direction = True, get = False, autotune = False):
         
         overlap_boxes = []
         gather = []
         gatherer = []
         overlap_box = [-1,-1,-1,-1,-1]
+        height = 0
         overlap_elem = []
         if discriminate:
             discri = self.discriminate_textboxes(self.get_jsonbox())
@@ -154,16 +156,23 @@ class Post:
             if(overlap_box[4] == -1):
                 overlap_box = copy.deepcopy(box)
                 gatherer.append(i)
+                height = overlap_box[2] - overlap_box[1]
                 if isinstance(box[0],list):
                     overlap_elem.extend(box[0])
                 else:
                     overlap_elem.append(box[0])
                 continue
+            if(autotune):
+                if x_direction:
+                    distance = height/3
+                else:
+                    distance = height/5
             if(self.overlap(overlap_box, box,overlapping,distance, x_direction)):
                 overlap_box[1] = min(box[1],overlap_box[1])
                 overlap_box[2] = max(box[2],overlap_box[2])
                 overlap_box[3] = min(box[3],overlap_box[3])
                 overlap_box[4] = max(box[4],overlap_box[4])
+                height = max(height, overlap_box[2]-overlap_box[1])
                 gatherer.append(i)
                 if isinstance(box[0], list):
                     overlap_elem.extend(box[0])
@@ -172,8 +181,10 @@ class Post:
             else:
                 if not discriminate:
                     overlap_box[0] = overlap_elem
+                    overlap_box.append(height)
                     overlap_boxes.append(overlap_box)
                     gather.extend(gatherer)
+
                 else:
                     count = 0
                     for elem in overlap_elem:
@@ -183,14 +194,17 @@ class Post:
                             count = count-1
                     if(count > 0):
                         overlap_box[0] = overlap_elem
+                        overlap_box.append(height)
                         overlap_boxes.append(overlap_box)
                         gather.extend(gatherer)
+
                 del overlap_elem
                 del gatherer
                 overlap_box = copy.deepcopy(box)
                 overlap_elem = []
                 gatherer = []
                 gatherer.append(i)
+                height = overlap_box[2]-overlap_box[1]
                 if isinstance(box[0], list):
                     overlap_elem.extend(box[0])
                 else:
@@ -204,12 +218,16 @@ class Post:
                     count = count-1
             if(count > 0):
                 overlap_box[0] = overlap_elem
+                overlap_box.append(height)
                 overlap_boxes.append(overlap_box)
                 gather.extend(gatherer)
+
         else:
             overlap_box[0] = overlap_elem
+            overlap_box.append(height)
             overlap_boxes.append(overlap_box)
             gather.extend(gatherer)
+
         if get:
             return overlap_boxes, gather
         return overlap_boxes
@@ -299,6 +317,8 @@ class Post:
             sort_hist = np.sort(hist,axis = None)
             a = a + sort_hist[-1]+sort_hist[-2]+sort_hist[-3]
         b=(box[2]-box[1]) *(box[4]-box[3]) * 3
+        if(b<=0):
+            return False
         if(a/b>=threshold):
             return True
         else:
@@ -450,7 +470,7 @@ class Post:
         textbox = self.get_largest_box(xxoverlap_box, merge)
         self.erase_text(overlap_box,(0,0,0),False)
 
-    def get_textbox(self, x_overlapping, y_overlapping, x_distance, y_distance, discriminative_power):
+    def get_textbox(self, x_overlapping, y_overlapping, x_distance, y_distance, discriminative_power, autotune=False):
         self.discriminative_power = discriminative_power
         box = self.get_jsonbox()
         sized_box = self.check_size(box)
@@ -470,12 +490,12 @@ class Post:
             if isinstance(box[0],list):
                 for elem in box[0]:
                     ko = data[elem]['description']
-                    # print(ko)
-                    ko.encode('UTF-8')
-                    # ko = ko.encode("UTF-8").decode('unicode_escape')
+                    ko = ko.replace('%', '\\').encode("UTF-8").decode('unicode_escape')
+                    #ko.encode('UTF-8')
+                    #ko = ko.encode("UTF-8").decode('unicode_escape')
                     s = s + ko + " "
             else:
-                s = s + data[box[0]]['description']
+                s = s + data[box[0]]['description'].encode('UTF-8')
             text.append(s)
         return text
 
@@ -548,25 +568,25 @@ class TextBox:
         self.box_W = box_size[0]
         self.box_H = box_size[1]
 
-def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.5 ,
-            x_distance = 30, y_distance = 10, discriminative_power = 0.7 ):
+def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.1 ,
+            x_distance = 30, y_distance = 10, discriminative_power = 0.7 , autotune = True):
 
     Contents = []
     Paragraphs = []
-
+    print("Remove text!")
     for i in range(len(images)):
         dst = str(i)+'.jpg'
         Post_object = Post(images[i], json_files[i])
-        print("Remove text!")
+
         box = Post_object.get_jsonbox()
         if box is None:
             Post_object.original_image.save(dst)
             continue
         textbox = Post_object.get_textbox(x_overlapping, y_overlapping ,
-            x_distance, y_distance, discriminative_power  )
+            x_distance, y_distance, discriminative_power ,autotune)
         Post_object.setbox(textbox)
         text = Post_object.get_text(textbox)
-        Post_object.erase_text(box,(255,0,0),True)
+        #Post_object.erase_text(box,(255,0,0),True)
         Contents.append(Post_object)
 
         if isinstance(text, list):
@@ -577,57 +597,63 @@ def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.5 ,
         del Post_object
     return Contents, Paragraphs
 
-def inpainting(Contents, Translated):
 
+def inpainting(Contents, Translated):
+    print("Inesert text!")
     index = 0
     for content in Contents:
         for textbox in content.box:
-            for i in range(len(textbox)):
-                input_sentence = Translated[index]
-                textbox_Position = (textbox[i][3], textbox[i][1])
-                textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
-                default_font_size = textbox[i][2] - textbox[i][1]
-                r, g, b = content.get_background_color(textbox[i])
-                color = (abs(255 - r) + abs(255 - g) + abs(255 - b))/3
-                if(color > 200):
-                    Color = (0,0,0)
-                else:
-                    Color = (255,255,255)
-                textBox01 = TextBox(content.original_image, input_sentence, textbox_Position, textbox_Size,
-                                    default_font_size)
-                textBox01.generateText(Color)
-                index = index + 1
+            input_sentence = Translated[index]
+            textbox_Position = (textbox[3], textbox[1])
+            textbox_Size = (textbox[4] - textbox[3], textbox[2] - textbox[1])
+            default_font_size = textbox[5]
+            r, g, b = content.get_background_color(textbox)
+            color = (abs(255 - r) + abs(255 - g) + abs(255 - b))/3
+            if(color < 150):
+                Color = (0,0,0)
+            else:
+                Color = (255,255,255)
+            textBox01 = TextBox(content.original_image, input_sentence, textbox_Position, textbox_Size,
+                                default_font_size)
+            textBox01.generateText(Color)
+            index = index + 1
+
     return Contents
 
-def main():
-    image_name = "../ex_img/05.jpg"
-    json_path = "../ex_json/5.json"
-    replace_json_path = "../ex_json/remove_breakline/4.json"
-    image = Image.open(image_name)
-    if os.path.isfile(json_path):
-        replace_json_dir = os.path.join('..','ex_json', 'remove_breakline')
-        if not os.path.exists(replace_json_dir):
-            os.mkdir(replace_json_dir)
+def main2():
+    images_name = ["../ex_img/00.jpg","../ex_img/01.jpg","../ex_img/02.jpg","../ex_img/03.jpg","../ex_img/04.jpg"]
+    json_file_names = ["../ex_json/0.json","../ex_json/1.json","../ex_json/2.json","../ex_json/3.json","../ex_json/4.json"]
+    replace_json_path = ["../ex_json/remove_breakline/0.json","../ex_json/remove_breakline/1.json"
+                         ,"../ex_json/remove_breakline/2.json","../ex_json/remove_breakline/3.json","../ex_json/remove_breakline/4.json"]
 
-        f = open(json_path,'r')
-        f_replace = open(replace_json_path,'w')
-        lines = f.readlines()
-        for line in lines:
-            l = line.replace(r'"\\\"','"').replace(r'\\"',"").replace("'",'')
-            f_replace.write(l.replace('\\n', ' ').replace(r'\\','%').replace('\\','').strip('"'))
+    images = []
+    json_files = []
 
-        f.close()
-        f_replace.close()
+    for i in range(len(images_name)):
+        image = Image.open(images_name[i])
+        if os.path.isfile(json_file_names[i]):
+            replace_json_dir = os.path.join('..', 'ex_json', 'remove_breakline')
+            if not os.path.exists(replace_json_dir):
+                os.mkdir(replace_json_dir)
 
-        with open(replace_json_path) as json_file:
-            l = json_file.readline()
+            f = open(json_file_names[i], 'r')
+            f_replace = open(replace_json_path[i], 'w')
+            lines = f.readlines()
+            for line in lines:
+                l = line.replace(r'"\\\"', '"').replace(r'\\"', "").replace("'", '')
+                f_replace.write(l.replace('\\n', ' ').replace(r'\\', '%').replace('\\', '').strip('"'))
 
+            f.close()
+            f_replace.close()
 
-    else:
-        raise Exception('There is no "{0}" json file'.format("0"))
+            with open(replace_json_path[i]) as json_file:
+                l = json_file.readline()
+        images.append(image)
+        json_files.append(l)
 
-    a = Post(image, l)
-    a.get_textbox(x_overlapping = 0.8, y_overlapping = 0.5 ,
-            x_distance = 30, y_distance = 10, discriminative_power = 0.65 )
-    plt.imshow(a.original_image)
-    plt.show()
+    contents, paragraphs = remover(images, json_files, y_overlapping= 0.3 ,discriminative_power=0.65, autotune=True)
+    contents = inpainting(contents, paragraphs)
+    for i, content in enumerate(contents):
+        content.original_image.save(str(i)+'.jpg')
+
+main2()
