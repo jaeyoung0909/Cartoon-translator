@@ -1,6 +1,6 @@
 from OCR.detector import detect_text_from_byte
 from MT.interactive import translator 
-from PargraphGenerating.insert_text import post_process, Post, TextBox
+from PargraphGenerating.insert_text import post_process, Post, TextBox, remover, inpainting
 from PargraphGenerating.combine_images import PreProcessByteImages
 from crawler import byteImgDownload
 import shutil
@@ -9,6 +9,7 @@ import os
 import sys
 import numpy as np
 import cv2
+
 def main(url):
     cwd = os.getcwd()
     ckpt_path = os.path.join(cwd, 'MT/ckpt/checkpoint77.pt')
@@ -29,30 +30,15 @@ def main(url):
     images = [cv2.cvtColor(img, cv2.COLOR_BGR2RGB) for img in images]
     plt.imshow(images[3])
     plt.show()
-    for i in range(len(images)):
-        dst = str(i)+'.jpg'
-        Post_object = Post(images[i], json_files[i])
-        print("Remove text!")
-        box = Post_object.get_jsonbox()
-        if box is None:
-            Post_object.original_image.save(dst)
-            continue
-        textbox = Post_object.get_textbox()
-        text = Post_object.get_text(textbox)
-        Post_object.erase_text(box,(255,0,0),True)  
-        translated = translator(text, ckpt_path, vocab_path, data_path)
-        print(text)
-        print(translated)
-        for i in range(len(textbox)):
-            input_sentence = translated[i]
-            textbox_Position = (textbox[i][3], textbox[i][1])
-            textbox_Size = (textbox[i][4] - textbox[i][3], textbox[i][2] - textbox[i][1])
-            default_font_size = textbox[i][2] - textbox[i][1]
-            r,g,b = Post_object.get_background_color(textbox[i])
-            color = (abs(255-r),abs(255-g), abs(255-b))
-            textBox01 = TextBox(Post_object.original_image, input_sentence, textbox_Position, textbox_Size, default_font_size)
-            textBox01.generateText(color)
-        Post_object.original_image.save(dst)
+
+    ### remove text and insert translated text
+    Contents, Paragraphs = remover(images, json_files, autotune=True)
+    # remove text
+    translated = translator(Paragraphs, ckpt_path, vocab_path, data_path)
+    # Generate text inserted image in list
+    Outputs = inpainting(Contents, translated)
+
+
     
 
 
