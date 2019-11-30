@@ -9,21 +9,6 @@ import textwrap
 import math
 
 class Post:
-
-    # def __init__(self, name):
-    #     self.name = name
-    #     image_path = os.path.join('..','ex_img', name)
-    #     print(image_path)
-    #     if os.path.isfile(image_path):
-    #         image = Image.open(image_path)
-    #     else:
-    #         raise Exception('There is no "{0}" image file'.format(name))
-    #     img_array = np.array(image)
-    #     dst = cv2.fastNlMeansDenoisingColored(img_array, None, 10, 10, 7, 21)
-    #     self.original_image = Image.fromarray(dst,'RGB')
-    #     self.json_data = self.treat_json_file()
-    #     del image
-
     def __init__(self,image,json_file):
         self.name = 'a'
         img_array = np.array(image)
@@ -138,7 +123,7 @@ class Post:
                 box = [i, coor_data[0]['y'], coor_data[2]['y'], coor_data[0]['x'], coor_data[2]['x']]
                 jsonbox.append(box)
             except:
-                print("json file has wrong format")
+                continue
         return jsonbox
 
     def detect_overlap(self, boxes, overlapping=0.8, distance=15, discriminate = False,
@@ -271,7 +256,7 @@ class Post:
             x2_left = box2[3]
             x2_right = box2[4]
             if (x1_left > x2_right or x1_right < x2_left):
-                return False;
+                return False
             y1_top = box1[2]
             y1_bot = box1[1]
             y2_top = box2[2]
@@ -490,8 +475,8 @@ class Post:
             if isinstance(box[0],list):
                 for elem in box[0]:
                     ko = data[elem]['description']
-                    ko = ko.replace('%', '\\').encode("UTF-8").decode('unicode_escape')
-                    #ko.encode('UTF-8')
+                    # ko = ko.replace('%', '\\').encode("UTF-8").decode('unicode_escape')
+                    ko.encode('UTF-8')
                     #ko = ko.encode("UTF-8").decode('unicode_escape')
                     s = s + ko + " "
             else:
@@ -515,6 +500,7 @@ class TextBox:
         self.font_size = default_font_size
         self.font_style = font_style
         self.font = ImageFont.truetype(font = font_style, size = self.font_size)
+        #print(os.getcwd())
         self.textWidth = 0
         self.message_paragraph = ""
         self.message_paragraph_W = 0;
@@ -568,8 +554,8 @@ class TextBox:
         self.box_W = box_size[0]
         self.box_H = box_size[1]
 
-def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.1 ,
-            x_distance = 30, y_distance = 10, discriminative_power = 0.7 , autotune = True):
+def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.2 ,
+            x_distance = 30, y_distance = 10, discriminative_power = 0.6 , autotune = True):
 
     Contents = []
     Paragraphs = []
@@ -593,14 +579,13 @@ def remover(images, json_files, x_overlapping = 0.8, y_overlapping = 0.1 ,
             Paragraphs.extend(text)
         else:
             Paragraphs.append(text)
-        Post_object.original_image.save(dst)
         del Post_object
     return Contents, Paragraphs
 
 
-def inpainting(Contents, Translated):
-    print("Inesert text!")
+def inpainting(Contents, Translated, font_path):
     index = 0
+    
     for content in Contents:
         for textbox in content.box:
             input_sentence = Translated[index]
@@ -614,7 +599,7 @@ def inpainting(Contents, Translated):
             else:
                 Color = (255,255,255)
             textBox01 = TextBox(content.original_image, input_sentence, textbox_Position, textbox_Size,
-                                default_font_size)
+                                default_font_size, font_path)
             textBox01.generateText(Color)
             index = index + 1
 
@@ -652,8 +637,6 @@ def main2():
         json_files.append(l)
 
     contents, paragraphs = remover(images, json_files, y_overlapping= 0.3 ,discriminative_power=0.65, autotune=True)
-    contents = inpainting(contents, paragraphs)
+    contents = inpainting(contents, paragraphs,os.getcwd())
     for i, content in enumerate(contents):
         content.original_image.save(str(i)+'.jpg')
-
-main2()
