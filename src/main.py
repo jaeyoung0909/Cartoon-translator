@@ -30,12 +30,14 @@ def main(url):
     # Generate text inserted image in list
     
     images = inpainting(Contents, translated, font_path)
-    for i in images:
-        plt.imshow(i.original_image)
-        plt.show()
+    if not os.path.exists('tmp'):
+        os.mkdir('tmp')
+    for i, img in enumerate(images):
+        img.original_image.save('tmp/{}.jpg'.format(i))
 
 
 if __name__ == "__main__":
     import sys 
     url = sys.argv[1]
     main(url)
+    print("END")

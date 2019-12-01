@@ -278,6 +278,8 @@ class Post:
             if (x1_right - x1_left < x2_right - x2_left):
                 over = (x_right - x_left) / (x1_right - x1_left)
             else:
+                if x2_right == x2_left:
+                    return False
                 over = (x_right - x_left) / (x2_right - x2_left)
             if (over < p):
                 return False

@@ -1,0 +1,5 @@
+'https://comic.naver.com/webtoon/detail.nhn?titleId=651673&no=439&weekday=wed',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=651673&no=431&weekday=wed',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=651673&no=426&weekday=wed',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=651673&no=422&weekday=wed',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=651673&no=407&weekday=wed',

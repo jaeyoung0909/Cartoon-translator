@@ -1,0 +1,5 @@
+'https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=184&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=179&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=175&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=142&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=568986&no=136&weekday=sat',

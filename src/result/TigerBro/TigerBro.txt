@@ -1,0 +1,5 @@
+'https://comic.naver.com/webtoon/detail.nhn?titleId=650305&no=237&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=650305&no=231&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=650305&no=223&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=650305&no=219&weekday=sat',
+'https://comic.naver.com/webtoon/detail.nhn?titleId=650305&no=204&weekday=sat',
