@@ -4,6 +4,9 @@
 
 ## Overview
 
+![Alt](imgs/overview.png "덴마")
+![Alt](imgs/overview1.png "유미와 친구들")
+![Alt](imgs/overview2.png "로그아웃")
 
 
 ## Requirements
@@ -25,10 +28,11 @@
 - Install [Fairseq](https://github.com/pytorch/fairseq)
 
   - Install it from source.
-
+  > ```
   > git clone https://github.com/pytorch/fairseq
   > cd fairseq
   > pip install --editable .
+  > ```
 
   - Or, using pip
 
@@ -50,6 +54,7 @@
   Thanks to [Kyubyong](https://github.com/Kyubyong/cjk_trans) for pre-trained transformer checkpoint.
 
 ## Usage
+It takes about 5 minutes depending on lengths of webtoon.
 
 > git clone https://github.com/jaeyoung0909/Cartoon-translator
 

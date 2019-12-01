@@ -6,6 +6,7 @@ from crawler import byteImgDownload
 import os 
 import numpy as np
 import cv2
+import matplotlib.pylab as plt
 
 def main(url):
     cwd = os.getcwd()
@@ -35,5 +36,6 @@ def main(url):
 
 
 if __name__ == "__main__":
-    ex_url = 'https://comic.naver.com/webtoon/detail.nhn?titleId=651673&no=435&weekday=sat'
-    main(ex_url)
+    import sys 
+    url = sys.argv[1]
+    main(url)
