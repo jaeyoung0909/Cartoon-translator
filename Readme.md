@@ -1,4 +1,4 @@
-# NAVER Webtoon Translator
+# Webtooniverse : NAVER Webtoon Translator
 
 ​	Because of Webtoon's convenience in browser and interesting contents, it gets popular from many global readers. The problem, which occurred by converting difficulties of webtoon, is that different sink of local and global version. To convert webtoon, basically two big pipeline is needed. One is typesetting, which remove text and in-painting that. Another is translating. Both of them takes some times so, process of Korean version is usually faster than other languages. What we implement is NAVER webtoon converting application to solve this problem for global readers.
 
